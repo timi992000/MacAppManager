@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="card1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <linearGradient id="card2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#2563eb"/>
+    </linearGradient>
+    <linearGradient id="card3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fb923c"/>
+      <stop offset="100%" style="stop-color:#ea580c"/>
+    </linearGradient>
+    <linearGradient id="card4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c084fc"/>
+      <stop offset="100%" style="stop-color:#9333ea"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="1024" height="1024" rx="180" fill="url(#bg)"/>
+
+  <!-- 2x2 app grid -->
+  <!-- Top-left: green -->
+  <rect x="140" y="140" width="330" height="330" rx="60" fill="url(#card1)"/>
+  <!-- Top-right: blue -->
+  <rect x="554" y="140" width="330" height="330" rx="60" fill="url(#card2)"/>
+  <!-- Bottom-left: orange -->
+  <rect x="140" y="554" width="330" height="330" rx="60" fill="url(#card3)"/>
+  <!-- Bottom-right: purple -->
+  <rect x="554" y="554" width="330" height="330" rx="60" fill="url(#card4)"/>
+
+  <!-- Green card: play triangle (Start) -->
+  <polygon points="245,235 245,375 385,305" fill="white" opacity="0.9"/>
+
+  <!-- Blue card: X (Kill) -->
+  <line x1="630" y1="210" x2="810" y2="390" stroke="white" stroke-width="48" stroke-linecap="round" opacity="0.9"/>
+  <line x1="810" y1="210" x2="630" y2="390" stroke="white" stroke-width="48" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Orange card: trash can (Uninstall) -->
+  <rect x="247" y="660" width="166" height="144" rx="14" fill="white" opacity="0.9"/>
+  <rect x="227" y="635" width="206" height="28" rx="10" fill="white" opacity="0.9"/>
+  <rect x="277" y="607" width="106" height="30" rx="10" fill="white" opacity="0.9"/>
+  <line x1="293" y1="673" x2="293" y2="783" stroke="#ea580c" stroke-width="16" stroke-linecap="round"/>
+  <line x1="330" y1="673" x2="330" y2="783" stroke="#ea580c" stroke-width="16" stroke-linecap="round"/>
+  <line x1="367" y1="673" x2="367" y2="783" stroke="#ea580c" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- Purple card: refresh arrows -->
+  <path d="M660 680 A89 89 0 1 1 749 769" fill="none" stroke="white" stroke-width="44" stroke-linecap="round" opacity="0.9"/>
+  <polygon points="719,749 779,749 749,809" fill="white" opacity="0.9"/>
+</svg>
