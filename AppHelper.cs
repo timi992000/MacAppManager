@@ -30,10 +30,15 @@ static class AppHelper
             foreach (var dir in dirs)
             {
                 if (!Directory.Exists(dir)) continue;
-                foreach (var sub in Directory.GetDirectories(dir))
+                IEnumerable<string> subdirs;
+                try { subdirs = Directory.GetDirectories(dir); }
+                catch (UnauthorizedAccessException) { continue; }
+                foreach (var sub in subdirs)
                 {
-                    var exe = Directory.GetFiles(sub, "*.exe", SearchOption.TopDirectoryOnly)
-                        .FirstOrDefault(f => !Path.GetFileName(f).Contains("uninstall", StringComparison.OrdinalIgnoreCase));
+                    string[] files;
+                    try { files = Directory.GetFiles(sub, "*.exe", SearchOption.TopDirectoryOnly); }
+                    catch (UnauthorizedAccessException) { continue; }
+                    var exe = files.FirstOrDefault(f => !Path.GetFileName(f).Contains("uninstall", StringComparison.OrdinalIgnoreCase));
                     if (exe == null) continue;
                     var name = Path.GetFileNameWithoutExtension(exe);
                     var running = Process.GetProcessesByName(name).Length > 0;
