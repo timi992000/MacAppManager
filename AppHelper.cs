@@ -55,18 +55,24 @@ static class AppHelper
 #pragma warning disable CA1416
     private static List<AppItem> GetWindowsApps()
     {
-        // Collect all running exe paths once for fast lookup
-        var runningPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Collect all running processes once
+        var runningByPath = new Dictionary<string, Process>(StringComparer.OrdinalIgnoreCase);
+        var runningByName = new Dictionary<string, Process>(StringComparer.OrdinalIgnoreCase);
         foreach (var proc in Process.GetProcesses())
         {
-            try { var path = proc.MainModule?.FileName; if (path != null) runningPaths.Add(path); }
+            try
+            {
+                var path = proc.MainModule?.FileName;
+                if (path != null) runningByPath.TryAdd(path, proc);
+            }
             catch { }
+            runningByName.TryAdd(proc.ProcessName, proc);
         }
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var coveredPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var apps = new List<AppItem>();
 
-        // Registry uninstall keys — most reliable source for installed apps
         var registryKeys = new[]
         {
             (@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", Registry.LocalMachine),
@@ -85,7 +91,6 @@ static class AppHelper
                 var displayName = sub?.GetValue("DisplayName") as string;
                 if (string.IsNullOrWhiteSpace(displayName)) continue;
 
-                // Skip update/component entries
                 var systemComponent = sub?.GetValue("SystemComponent") as int?;
                 if (systemComponent == 1) continue;
                 if (displayName.Contains("Update for", StringComparison.OrdinalIgnoreCase)) continue;
@@ -93,9 +98,7 @@ static class AppHelper
 
                 if (!seen.Add(displayName)) continue;
 
-                // Try to resolve exe path
                 string? exePath = null;
-
                 var displayIcon = (sub?.GetValue("DisplayIcon") as string)?.Split(',')[0].Trim('"', ' ');
                 if (displayIcon?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true && File.Exists(displayIcon))
                     exePath = displayIcon;
@@ -114,9 +117,23 @@ static class AppHelper
                     }
                 }
 
-                var running = exePath != null && runningPaths.Contains(exePath);
+                // Match running: by exe path, or by process name contained in display name
+                bool running = (exePath != null && runningByPath.ContainsKey(exePath))
+                    || runningByName.Keys.Any(n => displayName.Contains(n, StringComparison.OrdinalIgnoreCase));
+
+                if (exePath != null) coveredPaths.Add(exePath);
                 apps.Add(new AppItem(displayName, exePath ?? displayName, running));
             }
+        }
+
+        // Add running processes with a visible window not already covered
+        foreach (var (path, proc) in runningByPath)
+        {
+            if (coveredPaths.Contains(path)) continue;
+            if (proc.MainWindowHandle == IntPtr.Zero) continue; // skip background/system processes
+            var name = string.IsNullOrWhiteSpace(proc.MainWindowTitle) ? proc.ProcessName : proc.MainWindowTitle;
+            if (!seen.Add(name)) continue;
+            apps.Add(new AppItem(name, path, true));
         }
 
         return apps;
