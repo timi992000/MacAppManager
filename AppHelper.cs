@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Win32;
 
 static class AppHelper
 {
@@ -22,29 +23,7 @@ static class AppHelper
         }
         else if (OperatingSystem.IsWindows())
         {
-            var dirs = new[]
-            {
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-            };
-            foreach (var dir in dirs)
-            {
-                if (!Directory.Exists(dir)) continue;
-                IEnumerable<string> subdirs;
-                try { subdirs = Directory.GetDirectories(dir); }
-                catch (UnauthorizedAccessException) { continue; }
-                foreach (var sub in subdirs)
-                {
-                    string[] files;
-                    try { files = Directory.GetFiles(sub, "*.exe", SearchOption.TopDirectoryOnly); }
-                    catch (UnauthorizedAccessException) { continue; }
-                    var exe = files.FirstOrDefault(f => !Path.GetFileName(f).Contains("uninstall", StringComparison.OrdinalIgnoreCase));
-                    if (exe == null) continue;
-                    var name = Path.GetFileNameWithoutExtension(exe);
-                    var running = Process.GetProcessesByName(name).Length > 0;
-                    apps.Add(new AppItem(name, exe, running));
-                }
-            }
+            apps.AddRange(GetWindowsApps());
         }
         else if (OperatingSystem.IsLinux())
         {
@@ -72,4 +51,75 @@ static class AppHelper
 
         return apps.OrderBy(a => a.Name).ToList();
     }
+
+#pragma warning disable CA1416
+    private static List<AppItem> GetWindowsApps()
+    {
+        // Collect all running exe paths once for fast lookup
+        var runningPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var proc in Process.GetProcesses())
+        {
+            try { var path = proc.MainModule?.FileName; if (path != null) runningPaths.Add(path); }
+            catch { }
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var apps = new List<AppItem>();
+
+        // Registry uninstall keys — most reliable source for installed apps
+        var registryKeys = new[]
+        {
+            (@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", Registry.LocalMachine),
+            (@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", Registry.LocalMachine),
+            (@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", Registry.CurrentUser),
+        };
+
+        foreach (var (keyPath, hive) in registryKeys)
+        {
+            using var key = hive.OpenSubKey(keyPath);
+            if (key == null) continue;
+
+            foreach (var subName in key.GetSubKeyNames())
+            {
+                using var sub = key.OpenSubKey(subName);
+                var displayName = sub?.GetValue("DisplayName") as string;
+                if (string.IsNullOrWhiteSpace(displayName)) continue;
+
+                // Skip update/component entries
+                var systemComponent = sub?.GetValue("SystemComponent") as int?;
+                if (systemComponent == 1) continue;
+                if (displayName.Contains("Update for", StringComparison.OrdinalIgnoreCase)) continue;
+                if (displayName.Contains("Redistributable", StringComparison.OrdinalIgnoreCase)) continue;
+
+                if (!seen.Add(displayName)) continue;
+
+                // Try to resolve exe path
+                string? exePath = null;
+
+                var displayIcon = (sub?.GetValue("DisplayIcon") as string)?.Split(',')[0].Trim('"', ' ');
+                if (displayIcon?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true && File.Exists(displayIcon))
+                    exePath = displayIcon;
+
+                if (exePath == null)
+                {
+                    var location = sub?.GetValue("InstallLocation") as string;
+                    if (!string.IsNullOrEmpty(location) && Directory.Exists(location))
+                    {
+                        try
+                        {
+                            exePath = Directory.GetFiles(location, "*.exe", SearchOption.TopDirectoryOnly)
+                                .FirstOrDefault(f => !Path.GetFileName(f).Contains("uninstall", StringComparison.OrdinalIgnoreCase));
+                        }
+                        catch (UnauthorizedAccessException) { }
+                    }
+                }
+
+                var running = exePath != null && runningPaths.Contains(exePath);
+                apps.Add(new AppItem(displayName, exePath ?? displayName, running));
+            }
+        }
+
+        return apps;
+    }
+#pragma warning restore CA1416
 }
