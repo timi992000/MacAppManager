@@ -7,10 +7,10 @@
 
 # AppManager
 
-A lightweight, cross-platform desktop app to browse, launch, kill, and uninstall applications — with a clean GUI and an optional Terminal UI.
+A lightweight, cross-platform desktop app to browse, launch, kill, and uninstall applications.
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="AppManager Screenshot" width="700">
+  <img src="assets/screenshot_gui.png" alt="AppManager Screenshot" width="700">
 </p>
 
 <p align="center">
@@ -31,7 +31,6 @@ A lightweight, cross-platform desktop app to browse, launch, kill, and uninstall
 - **Kill** — force-quit running apps instantly
 - **Uninstall** — move apps to trash (macOS/Linux) or open system settings (Windows)
 - **Refresh** — reload the app list at any time
-- **Dual UI** — choose between a clean Avalonia GUI or a fast Terminal UI at startup
 - **Multi-language** — auto-detects your system language; dropdown to switch manually
 
 ---
@@ -87,9 +86,9 @@ chmod +x build.sh && ./build.sh
 
 ## Usage
 
-1. Launch the app — choose **GUI** or **Terminal UI**.
+1. Launch the app.
 2. Browse your installed apps; use the search bar or filter dropdown to narrow the list.
-3. Select one or more apps and click the action button:
+3. Select an app and click the action button:
    - **Start** — opens the app
    - **Kill** — force-quits the process
    - **Uninstall** — moves to trash / opens system settings
@@ -124,7 +123,6 @@ chmod +x build.sh && ./build.sh
 | Component | Technology |
 |---|---|
 | UI Framework | [Avalonia UI](https://avaloniaui.net) 12 |
-| Terminal UI | [Spectre.Console](https://spectreconsole.net) |
 | Runtime | .NET 10 |
 
 ---
@@ -133,9 +131,8 @@ chmod +x build.sh && ./build.sh
 
 ```
 AppManager/
-├── Program.cs          # Entry point, mode selection
+├── Program.cs          # Entry point
 ├── MainWindow.cs       # Avalonia GUI
-├── TerminalMode.cs     # Spectre.Console TUI
 ├── AppHelper.cs        # Platform-specific app discovery
 ├── AppActions.cs       # Start / Kill / Uninstall
 ├── AppItem.cs          # App data model
@@ -144,7 +141,7 @@ AppManager/
 ├── build.sh            # macOS .app+DMG / Linux binary builder
 ├── build.ps1           # Windows .exe builder
 └── assets/
-    ├── screenshot.png
+    ├── screenshot_gui.png
     └── AppIcon.icns
 ```
 
@@ -156,12 +153,11 @@ AppManager/
 
 ## 🇩🇪 Deutsch
 
-Ein schlanker, plattformübergreifender Desktop-App-Manager — mit Avalonia-GUI und optionalem Terminal-UI.
+Ein schlanker, plattformübergreifender Desktop-App-Manager mit Avalonia-GUI.
 
 - **App-Browser** — zeigt alle installierten Apps des Systems
 - **Suche & Filter** — nach Name suchen, nach laufend/gestoppt filtern
 - **Starten / Beenden / Deinstallieren** — mit einem Klick
-- **Dual-UI** — beim Start wählbar: GUI oder Terminal
 - **Mehrsprachig** — erkennt Systemsprache, Umschalter per Dropdown
 
 ```bash
@@ -176,12 +172,11 @@ dotnet run             # direkt starten
 
 ## 🇫🇷 Français
 
-Un gestionnaire d'applications léger et multiplateforme — avec une interface Avalonia et une interface Terminal.
+Un gestionnaire d'applications léger et multiplateforme avec interface Avalonia.
 
 - **Navigateur d'apps** — liste toutes les applications installées
 - **Recherche & filtre** — par nom, par état (actif/inactif)
 - **Démarrer / Fermer / Désinstaller** — en un clic
-- **Double interface** — GUI ou Terminal au démarrage
 - **Multilingue** — détection automatique de la langue système
 
 ```bash
@@ -196,12 +191,11 @@ dotnet run             # lancer directement
 
 ## 🇪🇸 Español
 
-Un administrador de aplicaciones ligero y multiplataforma — con GUI Avalonia e interfaz Terminal.
+Un administrador de aplicaciones ligero y multiplataforma con GUI Avalonia.
 
 - **Navegador de apps** — lista todas las aplicaciones instaladas
 - **Búsqueda y filtro** — por nombre o estado (activa/detenida)
 - **Iniciar / Cerrar / Desinstalar** — con un clic
-- **Interfaz dual** — GUI o Terminal al iniciar
 - **Multilingüe** — detecta el idioma del sistema automáticamente
 
 ```bash
@@ -216,12 +210,11 @@ dotnet run             # ejecutar directamente
 
 ## 🇮🇹 Italiano
 
-Un gestore di app leggero e multipiattaforma — con interfaccia Avalonia e Terminal UI.
+Un gestore di app leggero e multipiattaforma con interfaccia Avalonia.
 
 - **Browser app** — elenca tutte le app installate nel sistema
 - **Ricerca e filtro** — per nome o stato (in esecuzione/fermata)
 - **Avvia / Termina / Disinstalla** — con un clic
-- **Interfaccia doppia** — GUI o Terminal all'avvio
 - **Multilingue** — rileva automaticamente la lingua di sistema
 
 ```bash
