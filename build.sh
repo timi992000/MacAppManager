@@ -37,6 +37,8 @@ if [ "$OS" = "Darwin" ]; then
     <string>$PROJECT_NAME</string>
     <key>CFBundleName</key>
     <string>$APP_NAME</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.timoschulze.appmanager</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleIconFile</key>
@@ -48,6 +50,8 @@ if [ "$OS" = "Darwin" ]; then
 EOF
 
     chmod +x "$MACOS_DIR/$PROJECT_NAME"
+    echo "🔏 Ad-hoc signing..."
+    codesign --deep --force --sign - "$APP_BUNDLE"
     echo "✅ App bundle: $(pwd)/$APP_BUNDLE"
 
     echo "📦 Creating DMG installer..."

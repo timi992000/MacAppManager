@@ -46,6 +46,11 @@ Pre-built binaries are attached to every [release](../../releases/latest):
 | Linux | `AppManager` — self-contained binary |
 | Windows | `AppManager.exe` — self-contained executable |
 
+> **macOS note:** The app is ad-hoc signed but not notarized. On first launch, right-click → **Open** and confirm. Alternatively, remove the quarantine flag once after installing:
+> ```bash
+> xattr -cr /Applications/AppManager.app
+> ```
+
 ---
 
 ## Requirements (build from source)
