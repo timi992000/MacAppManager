@@ -27,6 +27,7 @@ A lightweight, cross-platform desktop app to browse, launch, kill, and uninstall
 
 - **App browser** — lists all installed applications on your system
 - **Search & filter** — search by name; filter by running / stopped
+- **Multi-select** — select multiple apps and apply any action to all at once
 - **Start** — launch any app with one click
 - **Kill** — force-quit running apps instantly
 - **Uninstall** — move apps to trash (macOS/Linux) or open system settings (Windows)
@@ -88,9 +89,9 @@ chmod +x build.sh && ./build.sh
 
 1. Launch the app.
 2. Browse your installed apps; use the search bar or filter dropdown to narrow the list.
-3. Select an app and click the action button:
-   - **Start** — opens the app
-   - **Kill** — force-quits the process
+3. Select one or more apps (hold ⌘ or Shift for multi-select) and click the action button:
+   - **Start** — opens the app(s)
+   - **Kill** — force-quits the process(es)
    - **Uninstall** — moves to trash / opens system settings
 
 ---
@@ -157,6 +158,7 @@ Ein schlanker, plattformübergreifender Desktop-App-Manager mit Avalonia-GUI.
 
 - **App-Browser** — zeigt alle installierten Apps des Systems
 - **Suche & Filter** — nach Name suchen, nach laufend/gestoppt filtern
+- **Mehrfachauswahl** — mehrere Apps gleichzeitig auswählen (⌘ oder Shift) und gemeinsam verwalten
 - **Starten / Beenden / Deinstallieren** — mit einem Klick
 - **Mehrsprachig** — erkennt Systemsprache, Umschalter per Dropdown
 
@@ -176,6 +178,7 @@ Un gestionnaire d'applications léger et multiplateforme avec interface Avalonia
 
 - **Navigateur d'apps** — liste toutes les applications installées
 - **Recherche & filtre** — par nom, par état (actif/inactif)
+- **Sélection multiple** — sélectionnez plusieurs apps (⌘ ou Shift) et agissez sur toutes à la fois
 - **Démarrer / Fermer / Désinstaller** — en un clic
 - **Multilingue** — détection automatique de la langue système
 
@@ -195,6 +198,7 @@ Un administrador de aplicaciones ligero y multiplataforma con GUI Avalonia.
 
 - **Navegador de apps** — lista todas las aplicaciones instaladas
 - **Búsqueda y filtro** — por nombre o estado (activa/detenida)
+- **Selección múltiple** — selecciona varias apps (⌘ o Shift) y aplica la acción a todas a la vez
 - **Iniciar / Cerrar / Desinstalar** — con un clic
 - **Multilingüe** — detecta el idioma del sistema automáticamente
 
@@ -214,6 +218,7 @@ Un gestore di app leggero e multipiattaforma con interfaccia Avalonia.
 
 - **Browser app** — elenca tutte le app installate nel sistema
 - **Ricerca e filtro** — per nome o stato (in esecuzione/fermata)
+- **Selezione multipla** — seleziona più app (⌘ o Shift) e agisci su tutte in una volta
 - **Avvia / Termina / Disinstalla** — con un clic
 - **Multilingue** — rileva automaticamente la lingua di sistema
 
