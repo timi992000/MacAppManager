@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -17,6 +17,7 @@ class MainWindow : Window
     private TextBlock _countLabel;
     private Button _startBtn, _killBtn, _uninstallBtn, _refreshBtn;
     private DispatcherTimer _statusTimer;
+    private CancellationTokenSource? _killCts;
 
     public MainWindow()
     {
@@ -105,9 +106,9 @@ class MainWindow : Window
         root.Children.Add(_listBox);
         Content = root;
 
-        _searchBox.TextChanged        += (_, _) => ApplyFilters();
-        _filterBox.SelectionChanged   += (_, _) => ApplyFilters();
-        _langCombo.SelectionChanged   += (_, _) =>
+        _searchBox.TextChanged      += (_, _) => ApplyFilters();
+        _filterBox.SelectionChanged += (_, _) => ApplyFilters();
+        _langCombo.SelectionChanged += (_, _) =>
         {
             if (_langCombo.SelectedIndex >= 0)
             {
@@ -116,10 +117,17 @@ class MainWindow : Window
             }
         };
 
+        // Cmd+A / Ctrl+A to select all visible list items
+        _listBox.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.A && (e.KeyModifiers.HasFlag(KeyModifiers.Meta) || e.KeyModifiers.HasFlag(KeyModifiers.Control)))
+                _listBox.SelectAll();
+        };
+
         _refreshBtn.Click   += (_, _) => Refresh();
-        _startBtn.Click     += (_, _) => ExecuteAction("start");
-        _killBtn.Click      += (_, _) => ExecuteAction("kill");
-        _uninstallBtn.Click += (_, _) => ExecuteAction("uninstall");
+        _startBtn.Click     += (_, _) => _ = ExecuteActionAsync("start");
+        _killBtn.Click      += (_, _) => _ = ExecuteActionAsync("kill");
+        _uninstallBtn.Click += (_, _) => _ = ExecuteActionAsync("uninstall");
 
         ApplyLanguage();
         if (_allApps.Any(a => a.IsRunning))
@@ -199,7 +207,7 @@ class MainWindow : Window
         ApplyFilters();
     }
 
-    private void ExecuteAction(string action)
+    private async Task ExecuteActionAsync(string action)
     {
         if (_listBox.SelectedItems == null || _listBox.Tag is not List<AppItem> sourceApps) return;
 
@@ -217,14 +225,33 @@ class MainWindow : Window
             _ => KillMode.Soft,
         };
 
-        foreach (var app in selected)
+        if (action == "kill" || action == "uninstall")
         {
-            if (action == "start")     AppActions.Start(app);
-            else if (action == "kill") AppActions.Kill(app, killMode);
-            else                       AppActions.Uninstall(app);
+            // Cancel any running kill operation and start fresh — lets the user
+            // interrupt a pending soft close and switch to force at any time
+            _killCts?.Cancel();
+            _killCts = new CancellationTokenSource();
+            var ct = _killCts.Token;
+
+            try
+            {
+                foreach (var app in selected)
+                {
+                    if (action == "kill")
+                        await AppActions.KillAsync(app, killMode, ct);
+                    else
+                        await AppActions.UninstallAsync(app, ct);
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+        else
+        {
+            foreach (var app in selected)
+                AppActions.Start(app);
         }
 
-        Thread.Sleep(600);
+        await Task.Delay(600);
         Refresh();
     }
 }

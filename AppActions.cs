@@ -14,33 +14,65 @@ static class AppActions
             Process.Start(new ProcessStartInfo("xdg-open", app.Path) { UseShellExecute = true });
     }
 
-    public static void Kill(AppItem app, KillMode mode = KillMode.Soft)
+    public static async Task KillAsync(AppItem app, KillMode mode, CancellationToken ct = default)
     {
         var name = app.ProcName;
 
         foreach (var p in Process.GetProcessesByName(name))
         {
+            ct.ThrowIfCancellationRequested();
             try
             {
                 switch (mode)
                 {
                     case KillMode.Soft:
-                        SendSoftClose(p, app.Name);
+                        await Task.Run(() => SendSoftClose(p, app.Name), ct);
                         break;
                     case KillMode.Force:
                         // SIGKILL — no cleanup, immediate termination
                         p.Kill(true);
                         break;
                     case KillMode.SoftThenForce:
-                        SendSoftClose(p, app.Name);
-                        // Fall back to force if the app doesn't exit within 5 seconds
-                        if (!p.WaitForExit(5000))
-                            p.Kill(true);
+                        await Task.Run(() => SendSoftClose(p, app.Name), ct);
+                        // Wait up to 5s; cancellation or timeout both fall through to force kill
+                        using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                        {
+                            timeoutCts.CancelAfter(5000);
+                            try { await p.WaitForExitAsync(timeoutCts.Token); }
+                            catch (OperationCanceledException) { if (!p.HasExited) p.Kill(true); }
+                        }
                         break;
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch { }
         }
+    }
+
+    public static async Task UninstallAsync(AppItem app, CancellationToken ct = default)
+    {
+        // Always force-kill before uninstalling to ensure the app is fully stopped
+        await KillAsync(app, KillMode.Force, ct);
+        await Task.Delay(500, ct);
+
+        await Task.Run(() =>
+        {
+            if (OperatingSystem.IsMacOS())
+            {
+                var script = $"tell application \"Finder\" to move POSIX file \"{app.Path}\" to trash";
+                Process.Start("osascript", new[] { "-e", script })?.WaitForExit();
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                var trashCmd = File.Exists("/usr/bin/gio") ? "gio" : "trash";
+                var trashArg = File.Exists("/usr/bin/gio") ? $"trash \"{app.Path}\"" : $"\"{app.Path}\"";
+                Process.Start("bash", new[] { "-c", $"{trashCmd} {trashArg}" })?.WaitForExit();
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start ms-settings:appsfeatures") { UseShellExecute = true });
+            }
+        }, ct);
     }
 
     // Requests a graceful quit using the platform's native mechanism.
@@ -56,28 +88,5 @@ static class AppActions
             p.CloseMainWindow();
         else
             Process.Start("kill", new[] { "-TERM", p.Id.ToString() })?.WaitForExit();
-    }
-
-    public static void Uninstall(AppItem app)
-    {
-        // Always force-kill before uninstalling to ensure the app is fully stopped
-        Kill(app, KillMode.Force);
-        Thread.Sleep(500);
-
-        if (OperatingSystem.IsMacOS())
-        {
-            var script = $"tell application \"Finder\" to move POSIX file \"{app.Path}\" to trash";
-            Process.Start("osascript", new[] { "-e", script })?.WaitForExit();
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            var trashCmd = File.Exists("/usr/bin/gio") ? "gio" : "trash";
-            var trashArg = File.Exists("/usr/bin/gio") ? $"trash \"{app.Path}\"" : $"\"{app.Path}\"";
-            Process.Start("bash", new[] { "-c", $"{trashCmd} {trashArg}" })?.WaitForExit();
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            Process.Start(new ProcessStartInfo("cmd", $"/c start ms-settings:appsfeatures") { UseShellExecute = true });
-        }
     }
 }
