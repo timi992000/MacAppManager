@@ -3,6 +3,14 @@ using Microsoft.Win32;
 
 static class AppHelper
 {
+    // Cheap status-only refresh — no filesystem scan, just process checks
+    public static List<AppItem> WithUpdatedStatus(List<AppItem> apps) =>
+        apps.Select(a =>
+        {
+            var procName = Path.GetFileNameWithoutExtension(a.Path);
+            return a with { IsRunning = Process.GetProcessesByName(procName).Length > 0 };
+        }).ToList();
+
     public static List<AppItem> GetApps()
     {
         var apps = new List<AppItem>();

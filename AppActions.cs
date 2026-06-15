@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+enum KillMode { Soft, Force, SoftThenForce }
+
 static class AppActions
 {
     public static void Start(AppItem app)
@@ -12,21 +14,54 @@ static class AppActions
             Process.Start(new ProcessStartInfo("xdg-open", app.Path) { UseShellExecute = true });
     }
 
-    public static void Kill(AppItem app)
+    public static void Kill(AppItem app, KillMode mode = KillMode.Soft)
     {
-        var name = OperatingSystem.IsWindows()
-            ? Path.GetFileNameWithoutExtension(app.Path)
-            : Path.GetFileNameWithoutExtension(app.Path);
+        var name = Path.GetFileNameWithoutExtension(app.Path);
 
         foreach (var p in Process.GetProcessesByName(name))
         {
-            try { p.Kill(true); } catch { }
+            try
+            {
+                switch (mode)
+                {
+                    case KillMode.Soft:
+                        SendSoftClose(p, name);
+                        break;
+                    case KillMode.Force:
+                        // SIGKILL — no cleanup, immediate termination
+                        p.Kill(true);
+                        break;
+                    case KillMode.SoftThenForce:
+                        SendSoftClose(p, name);
+                        // Fall back to force if the app doesn't exit within 5 seconds
+                        if (!p.WaitForExit(5000))
+                            p.Kill(true);
+                        break;
+                }
+            }
+            catch { }
         }
+    }
+
+    // Requests a graceful quit using the platform's native mechanism.
+    // macOS: Apple Event (kAEQuitApplication) — triggers save dialogs, same as ⌘Q.
+    // Windows: WM_CLOSE message via CloseMainWindow.
+    // Linux: SIGTERM.
+    // .NET has no cross-platform API for this; Process.CloseMainWindow() is Windows-only under the hood.
+    private static void SendSoftClose(Process p, string appName)
+    {
+        if (OperatingSystem.IsMacOS())
+            Process.Start("osascript", new[] { "-e", $"tell application \"{appName}\" to quit" })?.WaitForExit();
+        else if (OperatingSystem.IsWindows())
+            p.CloseMainWindow();
+        else
+            Process.Start("kill", new[] { "-TERM", p.Id.ToString() })?.WaitForExit();
     }
 
     public static void Uninstall(AppItem app)
     {
-        Kill(app);
+        // Always force-kill before uninstalling to ensure the app is fully stopped
+        Kill(app, KillMode.Force);
         Thread.Sleep(500);
 
         if (OperatingSystem.IsMacOS())

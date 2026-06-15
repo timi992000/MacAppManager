@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 class MainWindow : Window
 {
@@ -12,8 +13,10 @@ class MainWindow : Window
     private TextBox _searchBox;
     private ComboBox _filterBox;
     private ComboBox _langCombo;
+    private ComboBox _killModeCombo;
     private TextBlock _countLabel;
     private Button _startBtn, _killBtn, _uninstallBtn, _refreshBtn;
+    private DispatcherTimer _statusTimer;
 
     public MainWindow()
     {
@@ -70,6 +73,19 @@ class MainWindow : Window
         _uninstallBtn = new Button { Margin = new Thickness(5), Background = Brushes.DarkRed,    Foreground = Brushes.White };
         _refreshBtn   = new Button { Margin = new Thickness(5) };
 
+        _killModeCombo = new ComboBox
+        {
+            SelectedIndex     = 0,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin            = new Thickness(2, 5, 5, 5),
+            Width             = 120,
+        };
+        _killModeCombo.SelectionChanged += (_, _) => UpdateKillModeTooltip();
+
+        var killGroup = new StackPanel { Orientation = Orientation.Horizontal };
+        killGroup.Children.Add(_killBtn);
+        killGroup.Children.Add(_killModeCombo);
+
         var buttonPanel = new StackPanel
         {
             Orientation         = Orientation.Horizontal,
@@ -77,7 +93,7 @@ class MainWindow : Window
             Margin              = new Thickness(10),
         };
         buttonPanel.Children.Add(_startBtn);
-        buttonPanel.Children.Add(_killBtn);
+        buttonPanel.Children.Add(killGroup);
         buttonPanel.Children.Add(_uninstallBtn);
         buttonPanel.Children.Add(_refreshBtn);
 
@@ -106,19 +122,52 @@ class MainWindow : Window
         _uninstallBtn.Click += (_, _) => ExecuteAction("uninstall");
 
         ApplyLanguage();
+        if (_allApps.Any(a => a.IsRunning))
+            _filterBox.SelectedIndex = 1;
+
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _statusTimer.Tick += (_, _) =>
+        {
+            _allApps = AppHelper.WithUpdatedStatus(_allApps);
+            ApplyFilters();
+        };
+        _statusTimer.Start();
     }
 
     private void ApplyLanguage()
     {
         Title = L.Get("title");
         _searchBox.PlaceholderText = L.Get("search");
+        var prevFilter = _filterBox.SelectedIndex;
         _filterBox.ItemsSource = new[] { L.Get("filterAll"), L.Get("filterRunning"), L.Get("filterStopped") };
-        if (_filterBox.SelectedIndex < 0) _filterBox.SelectedIndex = 0;
+        _filterBox.SelectedIndex = prevFilter >= 0 ? prevFilter : 0;
         _startBtn.Content     = L.Get("start");
         _killBtn.Content      = L.Get("kill");
         _uninstallBtn.Content = L.Get("uninstall");
         _refreshBtn.Content   = L.Get("refresh");
+
+        var prevIndex = _killModeCombo.SelectedIndex;
+        _killModeCombo.ItemsSource = new[]
+        {
+            L.Get("killModeSoft"),
+            L.Get("killModeForce"),
+            L.Get("killModeSoftForce"),
+        };
+        _killModeCombo.SelectedIndex = prevIndex >= 0 ? prevIndex : 0;
+
+        UpdateKillModeTooltip();
         UpdateItemCount(_allApps.Count);
+    }
+
+    private void UpdateKillModeTooltip()
+    {
+        var tip = _killModeCombo.SelectedIndex switch
+        {
+            1 => L.Get("killModeForceTip"),
+            2 => L.Get("killModeSoftForceTip"),
+            _ => L.Get("killModeSoftTip"),
+        };
+        ToolTip.SetTip(_killModeCombo, tip);
     }
 
     private void ApplyFilters()
@@ -161,10 +210,17 @@ class MainWindow : Window
 
         var selected = selectedIndices.Select(i => sourceApps[i]).ToList();
 
+        var killMode = _killModeCombo.SelectedIndex switch
+        {
+            1 => KillMode.Force,
+            2 => KillMode.SoftThenForce,
+            _ => KillMode.Soft,
+        };
+
         foreach (var app in selected)
         {
             if (action == "start")     AppActions.Start(app);
-            else if (action == "kill") AppActions.Kill(app);
+            else if (action == "kill") AppActions.Kill(app, killMode);
             else                       AppActions.Uninstall(app);
         }
 
