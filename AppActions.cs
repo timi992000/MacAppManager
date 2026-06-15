@@ -16,7 +16,7 @@ static class AppActions
 
     public static void Kill(AppItem app, KillMode mode = KillMode.Soft)
     {
-        var name = Path.GetFileNameWithoutExtension(app.Path);
+        var name = app.ProcName;
 
         foreach (var p in Process.GetProcessesByName(name))
         {
@@ -25,14 +25,14 @@ static class AppActions
                 switch (mode)
                 {
                     case KillMode.Soft:
-                        SendSoftClose(p, name);
+                        SendSoftClose(p, app.Name);
                         break;
                     case KillMode.Force:
                         // SIGKILL — no cleanup, immediate termination
                         p.Kill(true);
                         break;
                     case KillMode.SoftThenForce:
-                        SendSoftClose(p, name);
+                        SendSoftClose(p, app.Name);
                         // Fall back to force if the app doesn't exit within 5 seconds
                         if (!p.WaitForExit(5000))
                             p.Kill(true);

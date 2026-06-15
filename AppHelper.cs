@@ -5,11 +5,25 @@ static class AppHelper
 {
     // Cheap status-only refresh — no filesystem scan, just process checks
     public static List<AppItem> WithUpdatedStatus(List<AppItem> apps) =>
-        apps.Select(a =>
-        {
-            var procName = Path.GetFileNameWithoutExtension(a.Path);
-            return a with { IsRunning = Process.GetProcessesByName(procName).Length > 0 };
-        }).ToList();
+        apps.Select(a => a with { IsRunning = Process.GetProcessesByName(a.ProcName).Length > 0 }).ToList();
+
+    // Reads CFBundleExecutable from the app bundle's Info.plist.
+    // The executable name often differs from the bundle name (e.g. "MSTeams" vs "Microsoft Teams").
+    private static string? GetBundleExecutable(string appPath)
+    {
+        var plist = Path.Combine(appPath, "Contents", "Info.plist");
+        if (!File.Exists(plist)) return null;
+
+        var content = File.ReadAllText(plist);
+        var keyIdx = content.IndexOf("<key>CFBundleExecutable</key>", StringComparison.Ordinal);
+        if (keyIdx < 0) return null;
+
+        var start = content.IndexOf("<string>", keyIdx, StringComparison.Ordinal) + 8;
+        var end   = content.IndexOf("</string>", start, StringComparison.Ordinal);
+        if (start < 8 || end < 0) return null;
+
+        return content[start..end].Trim();
+    }
 
     public static List<AppItem> GetApps()
     {
@@ -23,9 +37,11 @@ static class AppHelper
                 if (!Directory.Exists(dir)) continue;
                 foreach (var path in Directory.GetDirectories(dir, "*.app"))
                 {
-                    var name = Path.GetFileNameWithoutExtension(path);
-                    var running = Process.GetProcessesByName(name).Length > 0;
-                    apps.Add(new AppItem(name, path, running));
+                    var name     = Path.GetFileNameWithoutExtension(path);
+                    var execName = GetBundleExecutable(path);
+                    var procName = execName ?? name;
+                    var running  = Process.GetProcessesByName(procName).Length > 0;
+                    apps.Add(new AppItem(name, path, running, execName));
                 }
             }
         }
