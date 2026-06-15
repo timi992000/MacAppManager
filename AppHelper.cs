@@ -9,6 +9,7 @@ static class AppHelper
 
     // Reads CFBundleExecutable from the app bundle's Info.plist.
     // The executable name often differs from the bundle name (e.g. "MSTeams" vs "Microsoft Teams").
+    // Apple system apps use binary plists, so we try XML parsing first and fall back to plutil.
     private static string? GetBundleExecutable(string appPath)
     {
         var plist = Path.Combine(appPath, "Contents", "Info.plist");
@@ -16,13 +17,27 @@ static class AppHelper
 
         var content = File.ReadAllText(plist);
         var keyIdx = content.IndexOf("<key>CFBundleExecutable</key>", StringComparison.Ordinal);
-        if (keyIdx < 0) return null;
+        if (keyIdx >= 0)
+        {
+            var start = content.IndexOf("<string>", keyIdx, StringComparison.Ordinal) + 8;
+            var end   = content.IndexOf("</string>", start, StringComparison.Ordinal);
+            if (start >= 8 && end >= 0) return content[start..end].Trim();
+        }
 
-        var start = content.IndexOf("<string>", keyIdx, StringComparison.Ordinal) + 8;
-        var end   = content.IndexOf("</string>", start, StringComparison.Ordinal);
-        if (start < 8 || end < 0) return null;
-
-        return content[start..end].Trim();
+        // Binary plist — delegate to plutil which handles both formats
+        try
+        {
+            using var proc = Process.Start(new ProcessStartInfo(
+                "plutil", new[] { "-extract", "CFBundleExecutable", "raw", "-o", "-", plist })
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute        = false,
+            });
+            var value = proc?.StandardOutput.ReadToEnd().Trim();
+            proc?.WaitForExit();
+            return string.IsNullOrEmpty(value) ? null : value;
+        }
+        catch { return null; }
     }
 
     public static List<AppItem> GetApps()
